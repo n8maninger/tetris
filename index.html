@@ -1,0 +1,294 @@
+<canvas id="tetris" width="240" height="400"></canvas>
+<style>
+    canvas {
+        border: 1px solid black;
+        border-radius: 4px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.25);
+    }
+</style>
+<script>
+  const canvas = document.getElementById('tetris'),
+    context = canvas.getContext('2d');
+
+    let dir = 0;
+    window.addEventListener('keydown', (ev) => {
+        ev.preventDefault();
+
+        console.log(ev.keyCode);
+        switch (ev.keyCode) {
+        case 37: // left
+            dir = -1;
+            break;
+        case 39: // right
+            dir = 1;
+            break;
+        }
+    });
+
+    window.addEventListener('keyup', (ev) => {
+        ev.preventDefault();
+
+        if (ev.keyCode === 37 || ev.keyCode === 39) {
+            dir = 0;
+        }
+    });
+
+    const maxX = canvas.width / 20,
+        maxY = canvas.height / 20;
+
+    function makePiece() {
+        const matrix = [
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0]
+        ];
+        // place the first square
+        const checked = new Set();
+        const seed = Math.floor(Math.random() * 9);
+        const { x , y } = {
+            y: seed % 3,
+            x: Math.floor(seed / 3)
+        }
+        function fill(x, y, filled=false) {
+            if (x < 0 || x >= 3 || y < 0 || y >= 3) {
+                return;
+            } else if (checked.has(`${x},${y}`)) {
+                return;
+            }
+            checked.add(`${x},${y}`);
+
+            if (!filled)
+                filled = Math.random() >= 0.5;
+
+            if (!filled)
+                return;
+
+            color = Math.floor(Math.random() * 5) + 1;
+            matrix[y][x] = color;
+
+
+            // check the squares around the current square
+            fill(x - 1, y);
+            fill(x + 1, y);
+            fill(x, y - 1);
+            fill(x, y + 1);
+            fill(x - 1, y - 1);
+            fill(x + 1, y - 1);
+            fill(x - 1, y + 1);
+            fill(x + 1, y + 1);
+        }
+
+        fill(x, y, true);
+        return {
+            matrix,
+            offset: { x: Math.floor((Math.random() * maxX) + 3) - 3, y: 0 }
+        };
+    }
+
+    function fillColor(color) {
+        switch (color) {
+        case 1:
+            return '#36D955';
+        case 2:
+            return '#76E6EB';
+        case 3:
+            return '#FF7919';
+        case 4:
+            return '#E50AAE';
+        default:
+            return '#C3E500';
+        }
+    }
+
+    const board = [];
+    for (let y = 0; y < maxY; y++) {
+        board.push([]);
+        for (let x = 0; x < maxX; x++) {
+            board[y].push(0); // initialize the board with empty squares
+        }
+    }
+    function drawBoard() {
+        for (let y = 0; y < maxY; y++) {
+            for (let x = 0; x < maxX; x++) {
+                if (board[y][x] === 0) {
+                    continue; // skip empty squares
+                }
+                context.fillStyle = fillColor(board[y][x]);
+                context.fillRect(x * 20, y * 20, 20, 20);
+            }
+        }
+    }
+    let activePiece = makePiece();
+    function drawActivePiece() {
+        const { matrix, offset } = activePiece;
+
+        for (let y = 0; y < matrix.length; y++) {
+            for (let x = 0; x < matrix[y].length; x++) {
+                if (matrix[y][x] === 0) {
+                    continue; // skip empty squares
+                }
+
+                context.fillStyle = fillColor(matrix[y][x]);
+                context.fillRect((offset.x + x) * 20, (offset.y + y) * 20, 20, 20);
+            }
+        }
+    }
+
+    function checkCollision(newPos) {
+        const { matrix } = activePiece;
+
+        for (let y = 0; y < matrix.length; y++) {
+            for (let x = 0; x < matrix[y].length; x++) {
+                if (matrix[y][x] === 0) {
+                    continue; // skip empty squares
+                }
+
+                const boardX = newPos.x + x;
+                const boardY = newPos.y + y;
+
+                if (boardY >= maxY || board[boardY][boardX] > 0)
+                    return true;
+                else if (boardX < 0 || boardX >= maxX)
+                    return true;
+            }
+        }
+        return false;
+    }
+
+    let score = 0;
+    function checkBoard() {
+        function checkAdjacent(x, y, value, matching=[], checked = new Set()) {
+            if (checked.has(`${x},${y}`))
+                return matching;
+
+            if (x < 0 || x >= maxX || y < 0 || y >= maxY || board[y][x] !== value)
+                return matching; // out of bounds or not matching
+
+            checked.add(`${x},${y}`);
+            matching.push({ x, y });
+
+            // check adjacent squares
+            matching = checkAdjacent(x - 1, y, value, matching, checked);
+            matching = checkAdjacent(x + 1, y, value, matching, checked);
+            matching = checkAdjacent(x, y - 1, value, matching, checked);
+            matching = checkAdjacent(x, y + 1, value, matching, checked);
+            return matching;
+        }
+
+        for (let y = 0; y < maxY; y++) {
+            for (let x = 0; x < maxX; x++) {
+                const value = board[y][x];
+                if (value === 0) continue;
+
+                matching = checkAdjacent(x, y, value);
+                if (matching.length >= 3) {
+                    score += matching.length;
+                    console.log(`Score: ${score}`);
+                    console.log(matching, value);
+
+                    for (const { x, y } of matching)
+                        board[y][x] = 0; // remove the matching squares
+                }
+
+            }
+        }
+    }
+
+    let lastReflow = 0;
+    function reflowGrid(ts) {
+        const delta = ts - lastReflow;
+        if (delta < 100)
+            return;
+
+        for (let y = maxY - 1; y > 0; y--) {
+            for (let x = 0; x < maxX; x++) {
+                if (board[y][x] !== 0) {
+                    continue; // skip filled squares
+                }
+                // move the square above down
+                board[y][x] = board[y - 1][x] || 0;
+                board[y - 1][x] = 0; // clear the square above
+            }
+        }
+        lastReflow = ts;
+    }
+
+    function addActivePieceToBoard() {
+        const { matrix, offset } = activePiece;
+
+        for (let y = 0; y < matrix.length; y++) {
+            for (let x = 0; x < matrix[y].length; x++) {
+                if (matrix[y][x] === 0) {
+                    continue; // skip empty squares
+                }
+
+                const boardX = offset.x + x;
+                const boardY = offset.y + y;
+
+                if (boardY >= 0 && boardY < maxY && boardX >= 0 && boardX < maxX) {
+                    board[boardY][boardX] = matrix[y][x]; // add the piece to the board
+                }
+            }
+        }
+    }
+
+    let lastMoveX = 0;
+    function moveX(ts) {
+        const delta = ts - lastMoveX;
+        if (delta < 100)
+            return;
+
+        const newPos = { ...activePiece.offset };
+            if (dir === -1) {
+                newPos.x -= 1; // move left
+            } else if (dir === 1) {
+                newPos.x += 1; // move right
+            }
+            if (!checkCollision(newPos))
+                activePiece.offset.x = newPos.x;
+
+        lastMoveX = ts;
+    }
+
+    let lastMoveY = 0;
+    function moveY(ts) {
+        const delta = ts - lastMoveY;
+        if (delta < 500)
+            return;
+
+        const newPos = { ...activePiece.offset };
+        newPos.y += 1; // move down
+
+        if (checkCollision(newPos)) {
+            addActivePieceToBoard(); // add the current piece to the board
+            activePiece = makePiece(); // create a new piece
+        } else {
+            // update the position of the active piece
+            activePiece.offset.y = newPos.y;
+        }
+        lastMoveY = ts;
+    }
+
+    function writeScore() {
+        context.fillStyle = 'black';
+        context.font = '12px Arial';
+        context.fillText(`Score: ${score}`, 10, 20);
+    }
+
+    function draw(ts) {
+        try {
+            context.clearRect(0,0,canvas.width,canvas.height);
+            moveX(ts);
+            moveY(ts);
+            reflowGrid(ts);
+            drawActivePiece();
+            drawBoard();
+            checkBoard();
+            writeScore();
+        } finally {
+            requestAnimationFrame(draw);
+        }
+    }
+
+    draw();
+</script>
