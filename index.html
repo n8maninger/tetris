@@ -271,8 +271,24 @@
         context.fillText(`Score: ${score}`, 10, 20);
     }
 
+    let lose = false;
+    function checkLoss() {
+        for (let x = 0; x < maxX; x++) {
+            if (board[0][x] !== 0) {
+                lose = true;
+                return;
+            }
+        }
+    }
+
     function draw(ts) {
         try {
+            if (lose) {
+                context.fillStyle = 'red';
+                context.font = '24px Arial';
+                context.fillText('Game Over', canvas.width / 2 - 50, canvas.height / 2);
+                return;
+            }
             context.clearRect(0,0,canvas.width,canvas.height);
             moveX(ts);
             moveY(ts);
@@ -280,7 +296,9 @@
             drawActivePiece();
             drawBoard();
             checkBoard();
+            checkLoss();
             writeScore();
+            checkLoss();
         } finally {
             requestAnimationFrame(draw);
         }
