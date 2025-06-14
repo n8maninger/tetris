@@ -15,9 +15,6 @@
 
     let dir = 0;
     window.addEventListener('keydown', (ev) => {
-        ev.preventDefault();
-
-        console.log(ev.keyCode);
         switch (ev.keyCode) {
         case 37: // left
             dir = -1;
@@ -29,8 +26,6 @@
     });
 
     window.addEventListener('keyup', (ev) => {
-        ev.preventDefault();
-
         if (ev.keyCode === 37 || ev.keyCode === 39) {
             dir = 0;
         }
