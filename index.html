@@ -197,6 +197,7 @@
                 matching = checkAdjacent(x, y, value);
                 if (matching.length >= 3) {
                     score += matching.length;
+                    speedY = Math.max(50, 500 - Math.floor(score / 5)); // increase speed every 5 points
 
                     for (const { x, y } of matching)
                         board[y][x] = 0; // remove the matching squares
@@ -262,10 +263,11 @@
         lastMoveX = ts;
     }
 
+    let speedY = 500;
     let lastMoveY = 0;
     function moveY(ts) {
         const delta = ts - lastMoveY;
-        if (delta < 500)
+        if (delta < speedY)
             return;
 
         const newPos = { ...activePiece.offset };
@@ -284,7 +286,10 @@
     function writeScore() {
         context.fillStyle = 'black';
         context.font = '12px Arial';
+        context.textAlign = 'left';
         context.fillText(`Score: ${score}`, 10, 20);
+        context.textAlign = 'right';
+        context.fillText(`Speed: ${speedY}`, canvas.width-10, 20);
     }
 
     let lose = false;
