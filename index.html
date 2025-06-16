@@ -34,6 +34,12 @@
     const maxX = canvas.width / 20,
         maxY = canvas.height / 20;
 
+    function cellColor(matrix, x, y) {
+        if (x < 0 || x >= matrix[0].length || y < 0 || y >= matrix.length)
+            return 0; // out of bounds
+        return matrix[y][x];
+    }
+    
     function makePiece() {
         const matrix = [
             [0, 0, 0],
@@ -61,7 +67,17 @@
             if (!filled)
                 return;
 
-            color = Math.floor(Math.random() * 5) + 1;
+            let colors = new Set([1, 2, 3, 4, 5]);
+            // remove colors that are already directly adjacent to the current square
+            colors.delete(cellColor(matrix, x - 1, y));
+            colors.delete(cellColor(matrix, x + 1, y));
+            colors.delete(cellColor(matrix, x, y - 1));
+            colors.delete(cellColor(matrix, x, y + 1));
+
+            color = Array.from(colors)[Math.floor(Math.random() * colors.size)];
+            if (!color) {
+                return; // no colors left to fill
+            }
             matrix[y][x] = color;
 
 
