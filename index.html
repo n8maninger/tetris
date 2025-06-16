@@ -197,7 +197,7 @@
                 matching = checkAdjacent(x, y, value);
                 if (matching.length >= 3) {
                     score += matching.length;
-                    speedY = Math.max(50, 500 - Math.floor(score / 5)); // increase speed every 5 points
+                    speedY = Math.max(5, 500 - Math.floor(score / 3)); // increase speed every 3 points
 
                     for (const { x, y } of matching)
                         board[y][x] = 0; // remove the matching squares
